@@ -10,7 +10,7 @@ import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { env } from "./config/env.js";
 import { AIMessage, Case, DecisionSession, Document, Report, Review, SavedCase, User } from "./modules/models.js";
-import { AuthRequest, requireAdmin, requireAuth } from "./middlewares/auth.js";
+import { AuthRequest, optionalAuth, requireAdmin, requireAuth } from "./middlewares/auth.js";
 import { buildDecision } from "./utils/ai.js";
 import { analyzeDocument } from "./utils/document-ai.js";
 import { aiKeyStorageConfigured, encryptUserAiKey, keyHint } from "./utils/user-ai-key.js";
@@ -59,12 +59,15 @@ const issueSession = (res: express.Response, user: any) => {
 
 app.post("/api/auth/register", async (req, res, next) => {
   try {
-    const input = z.object({ name: z.string().trim().min(2).max(80), email: z.email(), password: z.string().min(8).max(128) }).parse(req.body);
-    if (await User.exists({ email: input.email })) return res.status(409).json({ message: "Email is already registered" });
+    const input = z.object({ name: z.string().trim().min(2).max(80), email: z.email().transform(email => email.trim().toLowerCase()), password: z.string().min(8).max(128) }).parse(req.body);
+    if (await User.exists({ email: input.email })) return res.status(409).json({ code: "EMAIL_ALREADY_REGISTERED", message: "This email is already registered. Log in instead." });
     const user = await User.create({ ...input, password: await bcrypt.hash(input.password, 12) });
     issueSession(res, user);
     res.status(201).json({ user: publicUser(user) });
-  } catch (error) { next(error); }
+  } catch (error: any) {
+    if (error?.code === 11000 && error?.keyPattern?.email) return res.status(409).json({ code: "EMAIL_ALREADY_REGISTERED", message: "This email is already registered. Log in instead." });
+    next(error);
+  }
 });
 
 app.post("/api/auth/login", async (req, res, next) => {
@@ -78,10 +81,11 @@ app.post("/api/auth/login", async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-app.get("/api/auth/me", requireAuth, async (req: AuthRequest, res, next) => {
+app.get("/api/auth/me", optionalAuth, async (req: AuthRequest, res, next) => {
   try {
+    if (!req.user) return res.json({ user: null });
     const user = await User.findById(req.user!.id);
-    if (!user || user.status === "suspended") return res.status(401).json({ message: "Session is no longer valid" });
+    if (!user || user.status === "suspended") return res.json({ user: null });
     res.json({ user: publicUser(user) });
   } catch (error) { next(error); }
 });
