@@ -15,7 +15,7 @@ import { buildDecision } from "./utils/ai.js";
 import { analyzeDocument } from "./utils/document-ai.js";
 import { aiKeyStorageConfigured, encryptUserAiKey, keyHint } from "./utils/user-ai-key.js";
 
-export const app = express();
+const app = express();
 app.use((helmet as unknown as () => express.RequestHandler)());
 app.use(cors({ origin: env.client, credentials: true }));
 app.use(express.json({ limit: "1mb" }));
@@ -187,3 +187,5 @@ app.get("/api/v1/admin/cases",requireAuth,requireAdmin,async(req,res,next)=>{try
 app.patch("/api/v1/admin/cases/:id/moderation",requireAuth,requireAdmin,async(req:AuthRequest,res,next)=>{try{const p=z.object({decision:z.enum(["approve","reject"]),note:z.string().trim().max(500).default("")}).parse(req.body);const item=await Case.findById(req.params.id);if(!item)return res.status(404).json({message:"Case not found"});if(item.visibility!=="public")return res.status(409).json({message:"Only cases submitted for public visibility can be moderated"});if(p.decision==="reject"&&p.note.length<5)return res.status(400).json({message:"Provide a clear rejection reason of at least 5 characters"});item.status=p.decision==="approve"?"Approved":"Rejected";item.moderationNote=p.note||"Approved for public discovery.";item.moderatedAt=new Date();item.moderatedBy=req.user!.id as any;await item.save();res.json(await item.populate([{path:"ownerId",select:"name email"},{path:"moderatedBy",select:"name"}]))}catch(e){next(e)}});
 app.delete("/api/v1/admin/cases/:id",requireAuth,requireAdmin,async(req,res,next)=>{try{const item=await Case.findByIdAndDelete(req.params.id);if(!item)return res.status(404).json({message:"Case not found"});await deleteCaseDependents(item.id);res.status(204).end()}catch(e){next(e)}});
 app.use((err:any,_q:any,res:any,_next:any)=>{if(err instanceof z.ZodError)return res.status(400).json({message:"Invalid request",issues:err.issues});if(err instanceof multer.MulterError)return res.status(400).json({message:err.message});console.error(err);if(typeof err?.statusCode==="number")return res.status(err.statusCode).json({message:err.message||"AI request failed",code:err.code});if(err instanceof Error&&err.message.includes("AI key storage"))return res.status(503).json({message:err.message});if(err instanceof Error&&(err.message.startsWith("Gemini ")||err.message.includes("no readable text")))return res.status(502).json({message:err.message});res.status(500).json({message:"Something went wrong"})});
+
+export default app;

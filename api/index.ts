@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import mongoose from "mongoose";
-import { app } from "../src/app.js";
+import app from "../src/app.js";
 import { env } from "../src/config/env.js";
 import { Case } from "../src/modules/models.js";
 import { ensureDemoAccount } from "../src/utils/demo-account.js";
