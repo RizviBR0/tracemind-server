@@ -53,6 +53,7 @@ app.get("/health",(_q,r)=>r.json({status:"ok"}));
 const productionCookies = process.env.NODE_ENV === "production";
 const cookieSameSite: "none" | "lax" = productionCookies ? "none" : "lax";
 const cookieOptions = { httpOnly: true, sameSite: cookieSameSite, secure: productionCookies, maxAge: 7 * 24 * 60 * 60 * 1000, path: "/" };
+const googleCallbackUrl = `${env.client.replace(/\/$/, "")}/api/backend/api/auth/google/callback`;
 const publicUser = (user: any) => ({ id: user.id, name: user.name, email: user.email, role: user.role });
 const issueSession = (res: express.Response, user: any) => {
   const token = jwt.sign({ id: user.id, role: user.role }, env.jwt, { expiresIn: "7d" });
@@ -137,8 +138,7 @@ app.post("/api/auth/logout", (_req, res) => {
 app.get("/api/auth/google", (req, res) => {
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) return res.status(503).json({ message: "Google OAuth is not configured" });
   const state = jwt.sign({ purpose: "google-oauth" }, env.jwt, { expiresIn: "10m" });
-  const callback = `${process.env.SERVER_URL || `http://localhost:${env.port}`}/api/auth/google/callback`;
-  const params = new URLSearchParams({ client_id: process.env.GOOGLE_CLIENT_ID, redirect_uri: callback, response_type: "code", scope: "openid email profile", state, prompt: "select_account" });
+  const params = new URLSearchParams({ client_id: process.env.GOOGLE_CLIENT_ID, redirect_uri: googleCallbackUrl, response_type: "code", scope: "openid email profile", state, prompt: "select_account" });
   res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);
 });
 
@@ -148,8 +148,7 @@ app.get("/api/auth/google/callback", async (req, res, next) => {
     const state = z.string().parse(req.query.state);
     const decoded = jwt.verify(state, env.jwt) as { purpose?: string };
     if (decoded.purpose !== "google-oauth") return res.status(400).json({ message: "Invalid OAuth state" });
-    const callback = `${process.env.SERVER_URL || `http://localhost:${env.port}`}/api/auth/google/callback`;
-    const tokenResponse = await fetch("https://oauth2.googleapis.com/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ code, client_id: process.env.GOOGLE_CLIENT_ID!, client_secret: process.env.GOOGLE_CLIENT_SECRET!, redirect_uri: callback, grant_type: "authorization_code" }) });
+    const tokenResponse = await fetch("https://oauth2.googleapis.com/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ code, client_id: process.env.GOOGLE_CLIENT_ID!, client_secret: process.env.GOOGLE_CLIENT_SECRET!, redirect_uri: googleCallbackUrl, grant_type: "authorization_code" }) });
     if (!tokenResponse.ok) return res.status(401).json({ message: "Google authentication failed" });
     const tokens = await tokenResponse.json() as { access_token: string };
     const profileResponse = await fetch("https://openidconnect.googleapis.com/v1/userinfo", { headers: { Authorization: `Bearer ${tokens.access_token}` } });
