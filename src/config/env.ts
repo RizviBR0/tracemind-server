@@ -1,0 +1,2 @@
+import dotenv from "dotenv"; dotenv.config();
+export const env={port:Number(process.env.PORT||5000),mongo:process.env.MONGODB_URI||"",jwt:process.env.JWT_SECRET||"",client:process.env.CLIENT_URL||"http://localhost:3000",geminiKey:process.env.GEMINI_API_KEY||"",model:process.env.GEMINI_MODEL||"gemini-2.5-flash",aiKeyEncryptionSecret:process.env.AI_KEY_ENCRYPTION_SECRET||"",demoEmail:(process.env.DEMO_EMAIL||"").trim().toLowerCase(),demoPassword:process.env.DEMO_PASSWORD||""};
