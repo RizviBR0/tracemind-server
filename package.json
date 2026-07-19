@@ -25,6 +25,7 @@
     "zod": "^4.1.5"
   },
   "devDependencies": {
+    "@vercel/node": "^5.5.18",
     "@types/bcryptjs": "^2.4.6",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
