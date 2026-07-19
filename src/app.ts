@@ -50,7 +50,9 @@ async function deleteCaseDependents(caseId: string) {
   ]);
 }
 app.get("/health",(_q,r)=>r.json({status:"ok"}));
-const cookieOptions = { httpOnly: true, sameSite: "lax" as const, secure: process.env.NODE_ENV === "production", maxAge: 7 * 24 * 60 * 60 * 1000, path: "/" };
+const productionCookies = process.env.NODE_ENV === "production";
+const cookieSameSite: "none" | "lax" = productionCookies ? "none" : "lax";
+const cookieOptions = { httpOnly: true, sameSite: cookieSameSite, secure: productionCookies, maxAge: 7 * 24 * 60 * 60 * 1000, path: "/" };
 const publicUser = (user: any) => ({ id: user.id, name: user.name, email: user.email, role: user.role });
 const issueSession = (res: express.Response, user: any) => {
   const token = jwt.sign({ id: user.id, role: user.role }, env.jwt, { expiresIn: "7d" });
@@ -128,7 +130,7 @@ app.delete("/api/auth/ai-key", requireAuth, async (req: AuthRequest, res, next) 
 });
 
 app.post("/api/auth/logout", (_req, res) => {
-  res.clearCookie("token", { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/" });
+  res.clearCookie("token", { httpOnly: true, sameSite: cookieSameSite, secure: productionCookies, path: "/" });
   res.status(204).end();
 });
 
