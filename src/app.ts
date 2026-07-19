@@ -16,11 +16,11 @@ import { analyzeDocument } from "./utils/document-ai.js";
 import { aiKeyStorageConfigured, encryptUserAiKey, keyHint } from "./utils/user-ai-key.js";
 
 export const app = express();
-app.use(helmet());
+app.use((helmet as unknown as () => express.RequestHandler)());
 app.use(cors({ origin: env.client, credentials: true }));
 app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
-app.use(rateLimit({ windowMs: 15 * 60 * 1000, limit: 150 }));
+app.use((rateLimit as unknown as (options: Record<string, unknown>) => express.RequestHandler)({ windowMs: 15 * 60 * 1000, limit: 150 }));
 const upload=multer({storage:multer.memoryStorage(),limits:{fileSize:10*1024*1024,files:5},fileFilter:(_r,f,cb)=>cb(null,["application/pdf","application/vnd.openxmlformats-officedocument.wordprocessingml.document","text/plain","image/png","image/jpeg"].includes(f.mimetype))}); const slugify=(v:string)=>v.toLowerCase().trim().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");
 const approvedPublicFilter = { visibility: "public", status: "Approved" } as const;
 
