@@ -6,9 +6,6 @@ TraceMind Server is the TypeScript/Express API behind the TraceMind decision-int
 
 - GitHub repository: [tracemind-server](https://github.com/RizviBR0/tracemind-server)
 - Frontend repository: [tracemind-client](https://github.com/RizviBR0/tracemind-client)
-- Live API: deployment URL is not configured in this repository yet
-
-The server is structured for Vercel deployment through [`vercel.json`](vercel.json), but a deployed API URL must be added after deployment.
 
 ## Main technologies
 
